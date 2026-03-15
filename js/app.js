@@ -456,6 +456,28 @@ function renderVacTrackTab(profile) {
     const ageWeeks = getAgeWeeksFromDue(profile.due_date);
     const records = getVaccineRecords(profile.id);
 
+    // Tính tổng tiền
+    let totalSpent = 0;
+    Object.values(records).forEach(vac => {
+        Object.values(vac).forEach(dose => {
+            totalSpent += (parseInt(dose.cost) || 0);
+        });
+    });
+
+    const moneyCard = document.createElement('div');
+    moneyCard.style.padding = '16px';
+    moneyCard.style.background = '#3D3010';
+    moneyCard.style.borderRadius = '12px';
+    moneyCard.style.marginBottom = '16px';
+    moneyCard.style.display = 'flex';
+    moneyCard.style.justifyContent = 'space-between';
+    moneyCard.style.alignItems = 'center';
+    moneyCard.innerHTML = `
+        <div style="color:var(--vac-orange); font-weight:bold; font-size:14px">💰 Tổng chi phí tiêm:</div>
+        <div style="color:white; font-size:20px; font-weight:bold">${totalSpent.toLocaleString('vi-VN')} đ</div>
+    `;
+    main.appendChild(moneyCard);
+
     // Track Cards
     VACCINES.forEach(vac => {
         const vacRecs = records[vac.id] || {};
@@ -470,15 +492,53 @@ function renderVacTrackTab(profile) {
         const sttIcon = allDone ? '✅' : `${Object.keys(vacRecs).length}/${vac.doses.length}`;
 
         let dosesHtml = '';
-        vac.doses.forEach(dose => {
+        let lastDoseDate = null;
+
+        vac.doses.forEach((dose, idx) => {
             const isDone = !!vacRecs[dose.dose_number];
             const isAct = ageWeeks >= dose.min_age_weeks && ageWeeks <= dose.max_age_weeks;
             const isUpC = !isDone && (dose.min_age_weeks - ageWeeks > 0) && (dose.min_age_weeks - ageWeeks <= 5);
             
             let rCls = isDone ? 'done-dose' : (isAct || isUpC ? 'active-dose' : '');
             let chk = isDone ? 'checked' : '';
-            let stText = isDone ? `✅ ${vacRecs[dose.dose_number].date}` : (isAct ? '🔶 Cần tiêm' : (isUpC ? `🔵 ~${Math.ceil((dose.min_age_weeks - ageWeeks)*7)}d` : ''));
-            let stCl = isDone ? 'color-green' : (isAct ? 'color-orange' : (isUpC ? 'color-blue' : ''));
+            
+            let stText = '';
+            let stCl = '';
+            
+            if (isDone) {
+                const costFmt = vacRecs[dose.dose_number].cost > 0 ? ` - ${parseInt(vacRecs[dose.dose_number].cost).toLocaleString('vi-VN')}đ` : '';
+                stText = `✅ ${vacRecs[dose.dose_number].date}${costFmt}`;
+                stCl = 'color-green';
+                lastDoseDate = new Date(vacRecs[dose.dose_number].date);
+            } else if (isAct) {
+                // Tính mũi tiếp theo dựa trên ngày tiêm mũi truớc nếu có
+                if (idx > 0 && lastDoseDate && vac.doses[idx-1]) {
+                    const prevDose = vac.doses[idx-1];
+                    const weekDiff = dose.min_age_weeks - prevDose.min_age_weeks;
+                    if(weekDiff > 0) {
+                        const expectedDate = new Date(lastDoseDate);
+                        expectedDate.setDate(expectedDate.getDate() + (weekDiff * 7));
+                        stText = `🔶 Tới lịch (Hẹn/Gợi ý từ: ${expectedDate.toLocaleDateString('vi-VN')})`;
+                    } else {
+                        stText = '🔶 Đã tới lịch tiêm';
+                    }
+                } else {
+                    stText = '🔶 Đã tới lịch tiêm';
+                }
+                stCl = 'color-orange';
+            } else if (isUpC) {
+                stText = `🔵 Trễ nhất là ~${Math.ceil((dose.min_age_weeks - ageWeeks)*7)} ngày nữa`;
+                stCl = 'color-blue';
+            } else if (idx > 0 && lastDoseDate && !isDone) {
+                 const prevDose = vac.doses[idx-1];
+                 const weekDiff = dose.min_age_weeks - prevDose.min_age_weeks;
+                 if(weekDiff > 0) {
+                      const expectedDate = new Date(lastDoseDate);
+                      expectedDate.setDate(expectedDate.getDate() + (weekDiff * 7));
+                      stText = `Chưa tới lịch (Dự kiến: ${expectedDate.toLocaleDateString('vi-VN')})`;
+                      stCl = 'color-muted';
+                 }
+            }
 
             dosesHtml += `
                 <div class="track-dose ${rCls}" onclick="toggleVacDose('${vac.id}', ${dose.dose_number}, ${isDone})">
