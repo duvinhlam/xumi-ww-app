@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xumi-ww-v2';
+const CACHE_NAME = 'xumi-ww-v3';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

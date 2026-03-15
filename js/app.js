@@ -523,7 +523,7 @@ function renderVacSchedTab(profile) {
         let isFree = String(pr).includes('Miễn phí');
 
         card.innerHTML = `
-            <div style="width:4px; height:100%; border-radius:2px; background:${item.is_required ? 'var(--vac-green)' : 'var(--vac-purple)';} margin-right:12px;"></div>
+            <div style="width:4px; height:100%; border-radius:2px; background:${item.is_required ? 'var(--vac-green)' : 'var(--vac-purple)'} margin-right:12px;"></div>
             <div class="flex-1">
                 <div class="font-bold text-sm mb-1" style="color:${stt==='done'?'var(--text-muted)':'white'}">${item.vaccine_name_vn} - ${item.dose_label}</div>
                 <div class="text-xs mb-1" style="color:var(--accent2)">Tuổi: ${item.recommended_age_label}</div>
